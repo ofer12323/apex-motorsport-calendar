@@ -11,6 +11,7 @@
   --muted: #8b96a5;
   --muted-strong: #b1bac6;
   --brand: #ff3548;
+  --today: #2f80ff;
   --success: #48d087;
   --warning: #e7b854;
   --shadow: 0 14px 36px rgb(0 0 0 / 24%);
@@ -1127,10 +1128,33 @@ main {
   background: var(--surface-soft);
 }
 
+.calendar-grid > div.today {
+  background: rgb(47 128 255 / 10%);
+  box-shadow: inset 0 0 0 2px var(--today);
+}
+
 .calendar-grid > div > span {
   color: var(--muted);
   font-family: "Courier New", monospace;
   font-size: 10px;
+}
+
+.calendar-grid > div.today > span {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  min-width: 26px;
+  min-height: 26px;
+  padding: 0 7px;
+  color: #fff;
+  background: var(--today);
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.calendar-grid > div.today > span small {
+  font-size: 7px;
+  letter-spacing: 0.08em;
 }
 
 .calendar-grid > div > a {

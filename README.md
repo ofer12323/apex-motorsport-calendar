@@ -1,6 +1,6 @@
 # Apex Motorsport Calendar
 
-A production motorsport calendar that combines verified schedules from official series and governing-body sources. It keeps all timestamps in UTC, presents them in the viewer's timezone, and labels unpublished session times as `TBA` instead of inventing data.
+A production motorsport calendar that combines verified schedules from official series and governing-body sources. It keeps all timestamps in UTC, presents them in the viewer's timezone, and clearly distinguishes confirmed event dates from session times that have not yet been published.
 
 ## Features
 
@@ -11,7 +11,7 @@ A production motorsport calendar that combines verified schedules from official 
 - Search across events, series, aliases, circuits, cities and countries
 - Dynamic event and circuit pages with official source attribution
 - Automatic timezone detection, manual timezone selection and UTC-only session timestamps
-- Persistent series, favorites, timezone and reminder preferences in local storage; D1 is available for server-side data caching
+- Persistent series, favorites, timezone and reminder preferences in local storage and D1 for signed-in users
 - Independent provider adapters, duplicate detection, validation, stale fallback caching and protected sync/status endpoints
 - Installable PWA with responsive phone, tablet and desktop layouts
 
@@ -45,14 +45,14 @@ The 2026 World Rallycross Championship was replaced by a six-round FIA European 
 ## Technology
 
 - Next.js-compatible Vinext, React 19 and TypeScript
-- Cloudflare Workers with optional D1 persistence
+- Cloudflare Workers and D1 through OpenAI Sites
 - Drizzle ORM with indexed event, session, source, sync and user-preference tables
 - Browser `Intl.DateTimeFormat` for timezone-safe display
 - Service worker and web app manifest for PWA installation
 
 ## Local Development
 
-Requirements: Node.js `>=22.13.0` and npm.
+Requirements: Node.js `>=22.13.0`, npm and the standard Linux build tools used by the Sites scripts.
 
 ```bash
 npm ci
@@ -65,14 +65,14 @@ Open the URL printed by Vite. D1 is optional for read-only local use because the
 ## Environment Variables
 
 ```dotenv
-ADMIN_TOKEN=replace-with-a-long-random-value
+ADMIN_EMAILS=owner@example.com
 CRON_SECRET=replace-with-a-long-random-value
 MOTORSPORT_API_KEY=
 SUPABASE_URL=
 SUPABASE_ANON_KEY=
 ```
 
-`CRON_SECRET` protects `POST /api/sync`. `ADMIN_TOKEN` protects `/api/data-status`; both should be stored as encrypted Cloudflare secrets and are never shipped to browser code. Supabase variables are included only for teams that choose to replace D1; this deployment does not require them.
+`CRON_SECRET` protects `POST /api/sync`. `ADMIN_EMAILS` optionally restricts `/admin/data-status` beyond the hosting platform's authenticated-user header. No secret is shipped to browser code. Supabase variables are included only for teams that choose to replace D1; this deployment does not require them.
 
 ## Commands
 
@@ -111,20 +111,12 @@ Do not add date-only events with fabricated times. Leave `sessions` empty until 
 
 ## Deployment
 
-This repository is configured for Cloudflare Workers through `wrangler.jsonc` and the Cloudflare Vite plugin. In Cloudflare Workers Builds use:
-
-```text
-Build command: npm run build
-Deploy command: npx wrangler deploy
-Production branch: main
-```
-
-Every push to `main` then creates a production deployment automatically. The verified bundled schedule and browser preferences work without a database. To enable D1 caching, create a D1 database, add a `DB` binding with its database ID to `wrangler.jsonc`, and apply `drizzle/0000_brief_pretty_boy.sql`.
+This repository is configured for OpenAI Sites in `.openai/hosting.json`, with the production D1 binding named `DB`. Checkpointing through the Sites lifecycle applies migrations and publishes an HTTPS deployment. The same source can be adapted to another Cloudflare-compatible host by providing the D1 binding and Worker environment variables.
 
 ## Admin and Security
 
 - `/admin/data-status` displays provider health, imports, errors, next refresh and validation counts without exposing secrets.
-- The admin status API requires the `ADMIN_TOKEN` bearer secret in production.
+- The admin API requires an authenticated hosting user and honors `ADMIN_EMAILS`.
 - Sync is disabled unless `CRON_SECRET` is configured and supplied.
 - API inputs are bounded and validated; public schedule responses use server caching and security headers.
-- Preferences remain local to the device until a dedicated authentication provider is configured.
+- Signed-in preferences are tied to the authenticated email header. Anonymous preferences remain local to the device.

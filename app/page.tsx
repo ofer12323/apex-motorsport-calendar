@@ -167,7 +167,7 @@ function formatDate(
 }
 
 function formatTime(value: string, timezone: string) {
-  if (isDateOnly(value)) return "TBA";
+  if (isDateOnly(value)) return "—";
   return formatDate(value, timezone, {
     hour: "2-digit",
     minute: "2-digit",
@@ -445,12 +445,12 @@ function RaceCard({
         </div>
         <footer>
           <span>
-            <small>YOUR TIME</small>
-            <b>{race.timingPrecision === "date" ? "TBA" : formatTime(race.start, timezone)}</b>
+            <small>{race.timingPrecision === "date" ? "EVENT DATE" : "YOUR TIME"}</small>
+            <b>{race.timingPrecision === "date" ? formatShortDate(race.start, timezone).toUpperCase() : formatTime(race.start, timezone)}</b>
           </span>
           <span>
-            <small>TRACK TIME</small>
-            <b>{race.timingPrecision === "date" ? "TBA" : formatTime(race.start, circuit.tz)}</b>
+            <small>{race.timingPrecision === "date" ? "TIMETABLE" : "TRACK TIME"}</small>
+            <b>{race.timingPrecision === "date" ? "PENDING" : formatTime(race.start, circuit.tz)}</b>
           </span>
           <span>
             <small>FORMAT</small>
@@ -540,8 +540,8 @@ function HomePage({
               </b>
             </span>
             <span>
-              <small>LOCAL START</small>
-              <b>{nextRace.timingPrecision === "date" ? "TIME TBA" : formatTime(nextRace.start, preferences.timezone)}</b>
+              <small>{nextRace.timingPrecision === "date" ? "EVENT STATUS" : "LOCAL START"}</small>
+              <b>{nextRace.timingPrecision === "date" ? "DATE CONFIRMED" : formatTime(nextRace.start, preferences.timezone)}</b>
             </span>
             <span>
               <small>FORMAT</small>
@@ -550,7 +550,7 @@ function HomePage({
           </div>
           <label>{nextRace.timingPrecision === "date" ? "CONFIRMED RACE DATE" : "LIGHTS OUT IN"}</label>
           {nextRace.timingPrecision === "date" ? (
-            <p className="time-tba">Session start time has not been published.</p>
+            <p className="time-tba">Session times will appear when the organizer publishes the timetable.</p>
           ) : (
             <Countdown to={nextRace.start} />
           )}
@@ -657,7 +657,7 @@ function HomePage({
                         {itemCircuit.flag} {itemCircuit.name}
                       </small>
                     </span>
-                    <time>{race.timingPrecision === "date" ? "TBA" : formatTime(race.start, preferences.timezone)}</time>
+                    <time>{race.timingPrecision === "date" ? formatShortDate(race.start, preferences.timezone).toUpperCase() : formatTime(race.start, preferences.timezone)}</time>
                     <em>VIEW</em>
                   </Link>
                 );
@@ -825,7 +825,7 @@ function Timeline({
                 {circuit.flag} {circuit.name}
               </em>
             </span>
-            <strong>{race.timingPrecision === "date" ? "TBA" : formatTime(race.start, timezone)}</strong>
+            <strong>{race.timingPrecision === "date" ? "DATE SET" : formatTime(race.start, timezone)}</strong>
           </Link>
         );
       })}
@@ -847,8 +847,11 @@ function CalendarPage({
   view: string;
   onView: (view: string) => void;
 }) {
+  const currentDateKey = localDateKey(new Date(), preferences.timezone);
   const [calendarMonth, setCalendarMonth] = useState(
-    season === new Date().getUTCFullYear() ? new Date().getUTCMonth() : 0,
+    season === Number(currentDateKey.slice(0, 4))
+      ? Number(currentDateKey.slice(5, 7)) - 1
+      : 0,
   );
   const [championshipFilter, setChampionshipFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -862,7 +865,7 @@ function CalendarPage({
 
   const calendarYear = season;
   const baseSource = onlySelected ? visibleRaces : allRaces;
-  const todayKey = localDateKey(new Date(), preferences.timezone);
+  const todayKey = currentDateKey;
   const weekendRange = getWeekendRange(new Date(), preferences.timezone);
   const filteredRaces = baseSource.filter((race) => {
     const championship = bySeries(race.series);
@@ -947,12 +950,18 @@ function CalendarPage({
                 (day) => <b key={day}>{day}</b>,
               )}
             </header>
-            {cells.map((day, index) => (
+            {cells.map((day, index) => {
+              const cellDateKey = day
+                ? `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+                : null;
+              const isToday = cellDateKey === todayKey;
+              return (
               <div
-                className={day ? "" : "outside"}
+                className={day ? (isToday ? "today" : "") : "outside"}
                 key={`${day ?? "empty"}-${index}`}
+                aria-current={isToday ? "date" : undefined}
               >
-                <span>{day}</span>
+                <span>{day}{isToday ? <small>TODAY</small> : null}</span>
                 {day
                   ? filteredRaces
                       .filter((race) => {
@@ -974,7 +983,8 @@ function CalendarPage({
                       ))
                   : null}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ) : view === "timeline" ? (
@@ -1139,11 +1149,15 @@ function EventPage({
         <Track variant={race.id.length} />
       </section>
       <div className="event-countdown">
-        <b>{race.timingPrecision === "date" ? "START TIME" : "RACE STARTS IN"}</b>
-        {race.timingPrecision === "date" ? <strong className="event-tba">TO BE ANNOUNCED</strong> : <Countdown to={race.start} />}
+        <b>{race.timingPrecision === "date" ? "EVENT DATE" : "RACE STARTS IN"}</b>
+        {race.timingPrecision === "date" ? (
+          <strong className="event-tba">
+            {formatDate(race.start, preferences.timezone, { day: "numeric", month: "long", year: "numeric" })}
+          </strong>
+        ) : <Countdown to={race.start} />}
         <span>
-          <small>YOUR LOCAL START</small>
-          <b>{race.timingPrecision === "date" ? "TBA" : formatTime(race.start, preferences.timezone)}</b>
+          <small>{race.timingPrecision === "date" ? "TIMETABLE" : "YOUR LOCAL START"}</small>
+          <b>{race.timingPrecision === "date" ? "PENDING" : formatTime(race.start, preferences.timezone)}</b>
         </span>
       </div>
       <div className="detail-grid">
@@ -1722,7 +1736,7 @@ export default function App() {
           <b>{dataState === "fallback" ? "CACHED VERIFIED DATA" : dataState === "loading" ? "SYNCING" : "OFFICIAL SCHEDULE DATA"}</b>
           <span>
             {lastSync ? `Last synchronized ${formatDate(lastSync, preferences.timezone, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}. ` : ""}
-            Session times marked TBA have not been published by the organizer.
+            Session times appear as soon as they are published by the organizer.
           </span>
         </div>
         <main>{page}</main>
