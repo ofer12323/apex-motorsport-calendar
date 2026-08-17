@@ -28,6 +28,29 @@ const f1Rows = [
   ["abu-dhabi-grand-prix", "Abu Dhabi Grand Prix", "yas-marina", "2026-12-04", "2026-12-06", "2026-12-06T13:00:00Z"],
 ] as const;
 
+// Session times below are UTC and come from the official Formula 1 weekend
+// timetables. Only published sessions are included; an absent entry remains
+// visibly unpublished in the UI rather than being estimated.
+const f1QualifyingSessions: Record<string, readonly (readonly [string, string])[]> = {
+  "dutch-grand-prix": [
+    ["Sprint Qualifying", "2026-08-21T14:30:00Z"],
+    ["Qualifying", "2026-08-22T14:00:00Z"],
+  ],
+  "italian-grand-prix": [["Qualifying", "2026-09-05T14:00:00Z"]],
+  "madrid-grand-prix": [["Qualifying", "2026-09-12T14:00:00Z"]],
+  "azerbaijan-grand-prix": [["Qualifying", "2026-09-25T12:00:00Z"]],
+  "singapore-grand-prix": [
+    ["Sprint Qualifying", "2026-10-09T12:30:00Z"],
+    ["Qualifying", "2026-10-10T13:00:00Z"],
+  ],
+  "united-states-grand-prix": [["Qualifying", "2026-10-24T21:00:00Z"]],
+  "mexico-city-grand-prix": [["Qualifying", "2026-10-31T21:00:00Z"]],
+  "sao-paulo-grand-prix": [["Qualifying", "2026-11-07T18:00:00Z"]],
+  "las-vegas-grand-prix": [["Qualifying", "2026-11-21T04:00:00Z"]],
+  "qatar-grand-prix": [["Qualifying", "2026-11-28T18:00:00Z"]],
+  "abu-dhabi-grand-prix": [["Qualifying", "2026-12-05T14:00:00Z"]],
+};
+
 const f1Events = f1Rows.map(([id, name, circuitId, startDate, endDate, raceTime]) =>
   E({
     championshipId: "f1",
@@ -38,7 +61,12 @@ const f1Events = f1Rows.map(([id, name, circuitId, startDate, endDate, raceTime]
     endDate,
     duration: "Grand Prix",
     raceType: "Formula",
-    sessions: [session(`2026-${id}`, "Race", "race", raceTime)],
+    sessions: [
+      ...(f1QualifyingSessions[id] ?? []).map(([sessionName, startTime]) =>
+        session(`2026-${id}`, sessionName, "qualifying", startTime),
+      ),
+      session(`2026-${id}`, "Race", "race", raceTime),
+    ],
   }),
 );
 
@@ -54,6 +82,10 @@ f1Events.splice(15, 0, E({
   duration: "Grand Prix",
   raceType: "Formula",
   sourceUrl: "https://www.formula1.com/en/racing/2026",
+  sessions: [
+    session("2026-bahrain-grand-prix-malaysia", "Qualifying", "qualifying", "2026-10-03T08:00:00Z"),
+    session("2026-bahrain-grand-prix-malaysia", "Race", "race", "2026-10-04T07:00:00Z"),
+  ],
 }));
 
 const supportRows = {

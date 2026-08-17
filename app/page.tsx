@@ -267,6 +267,21 @@ function getTodaySessions(source: Race[], timezone: string, reference = new Date
     .sort((a, b) => Date.parse(a.session.at) - Date.parse(b.session.at));
 }
 
+function getQualifyingSessions(race: Race) {
+  return race.sessions
+    .filter((item) => item.type === "QUALIFYING" || item.type === "HYPERPOLE")
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+}
+
+function getPrimaryQualifying(race: Race) {
+  const sessions = getQualifyingSessions(race);
+  return sessions[sessions.length - 1];
+}
+
+function getRaceSession(race: Race) {
+  return race.sessions.find((item) => item.type === "RACE");
+}
+
 function Track({ variant = 1 }: { variant?: number }) {
   const path =
     variant % 2
@@ -405,17 +420,22 @@ function RaceCard({
   const circuit = byCircuit(race.circuit);
   const date = formatShortDate(race.start, timezone).split(" ");
   const favorite = favorites.includes(race.id);
+  const qualifying = getPrimaryQualifying(race);
+  const raceSession = getRaceSession(race);
 
   return (
-    <article className="race-card">
-      <div className="card-art">
-        <Track variant={race.id.length} />
-        <span
-          className="series-badge"
-          style={{ "--accent": championship.color } as CSSProperties}
-        >
-          {championship.short}
-        </span>
+    <article
+      className="race-card"
+      style={{ "--accent": championship.color } as CSSProperties}
+    >
+      <time className="card-date" dateTime={race.start}>
+        <b>{date[0]}</b>
+        <small>{date[1]}</small>
+        <span>{formatDate(race.start, timezone, { weekday: "short" })}</span>
+      </time>
+      <div className="race-card-body">
+        <header className="race-card-topline">
+          <span><i />{championship.name}</span>
         <button
           type="button"
           className={favorite ? "favorite-button active" : "favorite-button"}
@@ -430,35 +450,31 @@ function RaceCard({
         >
           {favorite ? "Saved" : "Save"}
         </button>
-        <time dateTime={race.start}>
-          {date[0]}
-          <small>{date[1]}</small>
-        </time>
+        </header>
+        <Link href={`/event/${race.id}`} className="race-card-link">
+          <div className="card-copy">
+            <small>{race.type}</small>
+            <h3>{race.name}</h3>
+            <p>{circuit.flag} {circuit.name}, {circuit.country}</p>
+          </div>
+          <div className="race-card-schedule">
+            <span className={qualifying ? "confirmed" : "pending"}>
+              <small>{qualifying?.name ?? "Qualifying"}</small>
+              <b>{qualifying ? formatTime(qualifying.at, timezone) : "Not published"}</b>
+              <em>{qualifying ? formatShortDate(qualifying.at, timezone) : "Official schedule pending"}</em>
+            </span>
+            <span className={raceSession ? "confirmed" : "pending"}>
+              <small>Race</small>
+              <b>{raceSession ? formatTime(raceSession.at, timezone) : formatShortDate(race.start, timezone)}</b>
+              <em>{raceSession ? formatShortDate(raceSession.at, timezone) : "Start time pending"}</em>
+            </span>
+          </div>
+          <footer>
+            <span>{race.duration}</span>
+            <b>Event details <i aria-hidden="true">→</i></b>
+          </footer>
+        </Link>
       </div>
-      <Link href={`/event/${race.id}`} className="race-card-link">
-        <div className="card-copy">
-          <small>{race.type}</small>
-          <h3>{race.name}</h3>
-          <p>
-            {circuit.flag} {circuit.name}
-          </p>
-        </div>
-        <footer>
-          <span>
-            <small>{race.timingPrecision === "date" ? "EVENT DATE" : "YOUR TIME"}</small>
-            <b>{race.timingPrecision === "date" ? formatShortDate(race.start, timezone).toUpperCase() : formatTime(race.start, timezone)}</b>
-          </span>
-          <span>
-            <small>{race.timingPrecision === "date" ? "TIMETABLE" : "TRACK TIME"}</small>
-            <b>{race.timingPrecision === "date" ? "PENDING" : formatTime(race.start, circuit.tz)}</b>
-          </span>
-          <span>
-            <small>FORMAT</small>
-            <b>{race.duration}</b>
-          </span>
-          <i aria-hidden="true">GO</i>
-        </footer>
-      </Link>
     </article>
   );
 }
@@ -501,6 +517,8 @@ function HomePage({
   const weekend = getWeekendRaces(visibleRaces, preferences.timezone);
   const today = getTodaySessions(visibleRaces, preferences.timezone);
   const sevenDays = getNextSevenDays(visibleRaces);
+  const qualifying = getQualifyingSessions(nextRace);
+  const raceSession = getRaceSession(nextRace);
 
   return (
     <>
@@ -516,55 +534,54 @@ function HomePage({
         </div>
       </div>
 
-      <section
-        className="hero"
-        style={{ "--accent": championship.color } as CSSProperties}
-      >
+      <section className="hero" style={{ "--accent": championship.color } as CSSProperties}>
         <div className="hero-copy">
-          <small className="status-line">
-            <i /> NEXT RACE | {championship.name}
-          </small>
-          <h2>{nextRace.name}</h2>
-          <p>
-            {circuit.flag} {circuit.name}
-          </p>
-          <div className="hero-meta">
-            <span>
-              <small>RACE DATE</small>
-              <b>
-                {formatDate(nextRace.start, preferences.timezone, {
-                  weekday: "short",
-                  day: "numeric",
-                  month: "long",
-                })}
-              </b>
-            </span>
-            <span>
-              <small>{nextRace.timingPrecision === "date" ? "EVENT STATUS" : "LOCAL START"}</small>
-              <b>{nextRace.timingPrecision === "date" ? "DATE CONFIRMED" : formatTime(nextRace.start, preferences.timezone)}</b>
-            </span>
-            <span>
-              <small>FORMAT</small>
-              <b>{nextRace.duration}</b>
-            </span>
+          <div className="hero-kicker">
+            <span>{championship.short}</span>
+            <small><i /> Next on your calendar</small>
           </div>
-          <label>{nextRace.timingPrecision === "date" ? "CONFIRMED RACE DATE" : "LIGHTS OUT IN"}</label>
+          <h2>{nextRace.name}</h2>
+          <p className="hero-location">{circuit.flag} {circuit.name} · {circuit.country}</p>
+          <p className="hero-date">
+            {formatDate(nextRace.start, preferences.timezone, {
+              weekday: "long", day: "numeric", month: "long",
+            })} <span>·</span> {nextRace.duration}
+          </p>
+          <label>{nextRace.timingPrecision === "date" ? "Race date confirmed" : "Race starts in"}</label>
           {nextRace.timingPrecision === "date" ? (
             <p className="time-tba">Session times will appear when the organizer publishes the timetable.</p>
           ) : (
             <Countdown to={nextRace.start} />
           )}
-          <Link className="button primary" href={`/event/${nextRace.id}`}>
-            VIEW EVENT
-          </Link>
+          <div className="hero-actions">
+            <Link className="button primary" href={`/event/${nextRace.id}`}>Open event</Link>
+            <a className="hero-source" href={nextRace.officialUrl ?? nextRace.sourceUrl} target="_blank" rel="noreferrer">Official source ↗</a>
+          </div>
         </div>
-        <div className="hero-track">
-          <Track variant={nextRace.id.length} />
-          <b>{circuit.name.toUpperCase()}</b>
-          <small>
-            {circuit.length ? `${circuit.length} KM` : circuit.country} {circuit.corners ? `| ${circuit.corners} CORNERS` : ""}
-          </small>
-        </div>
+        <aside className="hero-schedule">
+          <header>
+            <span><small>Weekend schedule</small><b>Your local time</b></span>
+            <i>{preferences.timezone.replace(/_/g, " ")}</i>
+          </header>
+          <div>
+            {qualifying.length ? qualifying.map((session) => (
+              <Link href={`/event/${nextRace.id}`} key={session.id} className="hero-session qualifying">
+                <span><small>{session.name}</small><b>{formatDate(session.at, preferences.timezone, { weekday: "short", day: "numeric", month: "short" })}</b></span>
+                <time dateTime={session.at}>{formatTime(session.at, preferences.timezone)}</time>
+              </Link>
+            )) : (
+              <div className="hero-session pending">
+                <span><small>Qualifying</small><b>Official time not published</b></span>
+                <time>—</time>
+              </div>
+            )}
+            <Link href={`/event/${nextRace.id}`} className="hero-session race">
+              <span><small>Race</small><b>{formatDate(nextRace.start, preferences.timezone, { weekday: "short", day: "numeric", month: "short" })}</b></span>
+              <time dateTime={raceSession?.at ?? nextRace.start}>{raceSession ? formatTime(raceSession.at, preferences.timezone) : "Date set"}</time>
+            </Link>
+          </div>
+          <footer><span>Times converted automatically</span><b>{circuit.length ? `${circuit.length} km` : circuit.name}{circuit.corners ? ` · ${circuit.corners} turns` : ""}</b></footer>
+        </aside>
       </section>
 
       <div className="stats-bar">
@@ -646,6 +663,8 @@ function HomePage({
               {weekend.map((race) => {
                 const itemSeries = bySeries(race.series);
                 const itemCircuit = byCircuit(race.circuit);
+                const itemQualifying = getPrimaryQualifying(race);
+                const itemRace = getRaceSession(race);
                 return (
                   <Link key={race.id} href={`/event/${race.id}`}>
                     <i style={{ background: itemSeries.color }}>
@@ -657,8 +676,15 @@ function HomePage({
                         {itemCircuit.flag} {itemCircuit.name}
                       </small>
                     </span>
-                    <time>{race.timingPrecision === "date" ? formatShortDate(race.start, preferences.timezone).toUpperCase() : formatTime(race.start, preferences.timezone)}</time>
-                    <em>VIEW</em>
+                    <span className="weekend-session">
+                      <small>Qualifying</small>
+                      <time>{itemQualifying ? formatTime(itemQualifying.at, preferences.timezone) : "—"}</time>
+                    </span>
+                    <span className="weekend-session">
+                      <small>Race</small>
+                      <time>{itemRace ? formatTime(itemRace.at, preferences.timezone) : formatShortDate(race.start, preferences.timezone)}</time>
+                    </span>
+                    <em>→</em>
                   </Link>
                 );
               })}
@@ -801,6 +827,8 @@ function Timeline({
       {source.map((race) => {
         const championship = bySeries(race.series);
         const circuit = byCircuit(race.circuit);
+        const qualifying = getPrimaryQualifying(race);
+        const raceSession = getRaceSession(race);
         return (
           <Link
             key={race.id}
@@ -825,7 +853,10 @@ function Timeline({
                 {circuit.flag} {circuit.name}
               </em>
             </span>
-            <strong>{race.timingPrecision === "date" ? "DATE SET" : formatTime(race.start, timezone)}</strong>
+            <span className="timeline-times">
+              <small>Q {qualifying ? formatTime(qualifying.at, timezone) : "—"}</small>
+              <strong>R {raceSession ? formatTime(raceSession.at, timezone) : formatShortDate(race.start, timezone)}</strong>
+            </span>
           </Link>
         );
       })}
@@ -1102,6 +1133,7 @@ function EventPage({
   const championship = bySeries(race.series);
   const circuit = byCircuit(race.circuit);
   const favorite = preferences.favorites.includes(race.id);
+  const qualifying = getPrimaryQualifying(race);
   const addEvent = (title: string, start: string, eventId: string) => {
     downloadCalendarEvent(title, start, eventId);
     onCalendarAdded(`${title} calendar file downloaded`);
@@ -1156,8 +1188,12 @@ function EventPage({
           </strong>
         ) : <Countdown to={race.start} />}
         <span>
-          <small>{race.timingPrecision === "date" ? "TIMETABLE" : "YOUR LOCAL START"}</small>
-          <b>{race.timingPrecision === "date" ? "PENDING" : formatTime(race.start, preferences.timezone)}</b>
+          <small>QUALIFYING</small>
+          <b>{qualifying ? formatTime(qualifying.at, preferences.timezone) : "Not published"}</b>
+        </span>
+        <span>
+          <small>{race.timingPrecision === "date" ? "TIMETABLE" : "RACE · YOUR TIME"}</small>
+          <b>{race.timingPrecision === "date" ? "Pending" : formatTime(race.start, preferences.timezone)}</b>
         </span>
       </div>
       <div className="detail-grid">
@@ -1168,7 +1204,7 @@ function EventPage({
         >
           <div className="sessions">
             {race.sessions.length ? race.sessions.map((session) => (
-              <div key={session.name}>
+              <div key={session.name} className={session.type === "QUALIFYING" || session.type === "HYPERPOLE" ? "qualifying" : session.type === "RACE" ? "race" : ""}>
                 <small>{session.type}</small>
                 <b>{session.name}</b>
                 <time dateTime={session.at}>
