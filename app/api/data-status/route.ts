@@ -2,10 +2,8 @@ import { getSchedule } from "../../../lib/server/schedule-cache";
 
 function isAllowed(request: Request) {
   if (process.env.NODE_ENV === "development") return true;
-  const email = request.headers.get("oai-authenticated-user-email")?.toLowerCase();
-  if (!email) return false;
-  const allowlist = (process.env.ADMIN_EMAILS ?? "").split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
-  return allowlist.length === 0 || allowlist.includes(email);
+  const configured = process.env.ADMIN_TOKEN;
+  return Boolean(configured) && request.headers.get("authorization") === `Bearer ${configured}`;
 }
 
 export async function GET(request: Request) {

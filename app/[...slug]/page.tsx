@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       return {
         title: `${championship.name} - ${race.name}`,
         description,
-        openGraph: { title: `${championship.name} - ${race.name}`, description, type: "article", url: `/event/${race.id}` },
+        openGraph: { title: `${championship.name} - ${race.name}`, description, type: "article" },
       };
     }
   }
