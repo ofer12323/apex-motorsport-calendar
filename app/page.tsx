@@ -67,6 +67,36 @@ const NAV_ITEMS = [
   ["profile", "Settings", "/profile", "P"],
 ] as const;
 
+type NavIconName = (typeof NAV_ITEMS)[number][0];
+
+function ApexMark() {
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M4 24 14.2 6h5.2L29 24h-6.1l-1.8-3.6H11.4L9.5 24H4Zm10-8.6h4.6l-2.3-4.8-2.3 4.8Z" />
+      <path d="M6.8 26h18.8l2.4-4.2H9.2L6.8 26Z" opacity=".42" />
+    </svg>
+  );
+}
+
+function NavIcon({ name }: { name: NavIconName }) {
+  const paths: Record<NavIconName, ReactNode> = {
+    home: <><path d="m3 10 9-7 9 7" /><path d="M5 9.5V21h14V9.5M9 21v-7h6v7" /></>,
+    calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M7 3v4M17 3v4M3 10h18M7 14h3M14 14h3M7 18h3" /></>,
+    series: <><path d="M5 4h12l2 3-2 3H5v11" /><path d="M5 13h10l2 3-2 3H5" /></>,
+    circuits: <><path d="M4 16c2.5-7 6-10.5 10.5-9.5 4 .9 2.1 5.2 5.2 7.2 3.4 2.2.5 6.8-3.2 5.5-3.1-1.1-4.7 2.4-8.3.3C5.6 18 3.5 18 4 16Z" /><circle cx="5" cy="16" r="1.5" /></>,
+    weekend: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></>,
+    favorites: <path d="M12 20.5s-8-4.7-8-11A4.5 4.5 0 0 1 12 6a4.5 4.5 0 0 1 8 3.5c0 6.3-8 11-8 11Z" />,
+    search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" /></>,
+    profile: <><path d="M5 6h14M5 12h14M5 18h14" /><circle cx="9" cy="6" r="2" /><circle cx="15" cy="12" r="2" /><circle cx="11" cy="18" r="2" /></>,
+  };
+
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      {paths[name]}
+    </svg>
+  );
+}
+
 type Theme = "dark" | "light";
 
 function Link({ href, ...props }: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) {
@@ -1690,7 +1720,7 @@ export default function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <Link href="/" className="logo" aria-label="Apex home">
-          <i>A</i>
+          <i><ApexMark /></i>
           <span>
             <b>APEX</b>
             <small>MOTORSPORT CALENDAR</small>
@@ -1698,13 +1728,13 @@ export default function App() {
         </Link>
         <small>CONTROL CENTER</small>
         <nav aria-label="Primary navigation">
-          {NAV_ITEMS.map(([, label, href, icon]) => (
+          {NAV_ITEMS.map(([id, label, href]) => (
             <Link
               key={href}
               href={href}
               className={isActive(href) ? "active" : ""}
             >
-              <i>{icon}</i>
+              <i><NavIcon name={id} /></i>
               {label.toUpperCase()}
             </Link>
           ))}
@@ -1718,7 +1748,7 @@ export default function App() {
       <div className="main-column">
         <header className="topbar">
           <Link href="/" className="mobile-logo" aria-label="Apex home">
-            <i>A</i>
+            <i><ApexMark /></i>
             <b>APEX</b>
           </Link>
           <span suppressHydrationWarning>
@@ -1779,13 +1809,13 @@ export default function App() {
       </div>
 
       <nav className="bottom-nav" aria-label="Mobile navigation">
-        {mobileNav.map(([, label, href, icon]) => (
+        {mobileNav.map(([id, label, href]) => (
           <Link
             key={href}
             href={href}
             className={isActive(href) ? "active" : ""}
           >
-            <i>{icon}</i>
+            <i><NavIcon name={id} /></i>
             <small>{label}</small>
           </Link>
         ))}
